@@ -1,0 +1,707 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
+<title>Maido · Carta digital (demo)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+  :root{
+    --bg:#ffffff;
+    --ink:#161616;
+    --ink-2:#2b2b2b;
+    --muted:#9a8b78;        
+    --slate:#5b6473;        
+    --line:#ececec;
+    --line-2:#e3e3e3;
+    --track:#f3f2ef;        
+    --accent:#0f766e;       
+    --green:#2f9e6b;
+    --green-bg:#e6f4ec;
+    --radius:14px;
+    --pad:18px;
+    --shadow:0 1px 2px rgba(20,20,20,.04), 0 1px 3px rgba(20,20,20,.05);
+    font-synthesis:none;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{
+    margin:0;
+    font-family:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    color:var(--ink);
+    background:#dfe2e6;
+    display:flex;align-items:center;justify-content:center;
+    padding:24px 12px;
+    -webkit-font-smoothing:antialiased;
+  }
+  @media (max-width:440px){ body{padding:0;background:#fff} }
+
+  /* ---------- Marco de teléfono ---------- */
+  .phone{
+    width:393px;max-width:100%;
+    height:min(844px,94vh);
+    background:var(--bg);
+    border-radius:42px;
+    box-shadow:0 30px 70px -20px rgba(20,30,45,.45);
+    border:1px solid #d9dde2;
+    overflow:hidden;
+    display:flex;flex-direction:column;
+    position:relative;
+  }
+  @media (max-width:440px){
+    .phone{height:100vh;height:100dvh;width:100%;border-radius:0;border:none;box-shadow:none}
+  }
+
+  .statusbar{
+    flex:0 0 auto;
+    display:flex;align-items:center;justify-content:space-between;
+    padding:14px 22px 6px;
+    font-size:14px;font-weight:600;
+  }
+  .statusbar .icons{display:flex;gap:14px;color:var(--ink)}
+  .statusbar svg{width:18px;height:18px;display:block}
+
+  .screens{position:relative;flex:1 1 auto;min-height:0}
+  .screen{
+    position:absolute;inset:0;
+    display:none;flex-direction:column;min-height:0;
+    background:var(--bg);
+  }
+  .screen.active{display:flex}
+  .screen-body{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch}
+  .screen-footer{flex:0 0 auto;border-top:1px solid var(--line);background:#fff}
+
+  /* ---------- Header genérico ---------- */
+  .app-head{padding:8px 18px 14px;border-bottom:1px solid var(--line)}
+  .head-row{display:flex;align-items:center;justify-content:space-between;gap:12px}
+  .brand{display:flex;align-items:center;gap:11px}
+  .logo{
+    width:42px;height:42px;border-radius:11px;background:var(--ink);color:#fff;
+    display:grid;place-items:center;font-weight:800;font-size:20px;letter-spacing:.5px;
+  }
+  .brand h1{margin:0;font-size:19px;font-weight:700}
+  .brand .mesa{display:flex;align-items:center;gap:5px;color:var(--slate);font-size:13px;margin-top:2px}
+  .brand .mesa svg{width:14px;height:14px}
+
+  .icon-btn{
+    width:42px;height:42px;border-radius:11px;border:1px solid var(--line-2);background:#fff;
+    display:grid;place-items:center;cursor:pointer;position:relative;color:var(--ink);
+    transition:background .15s;
+  }
+  .icon-btn:hover{background:#fafafa}
+  .icon-btn svg{width:20px;height:20px}
+  .badge{
+    position:absolute;top:-6px;right:-6px;min-width:19px;height:19px;padding:0 5px;
+    background:var(--ink);color:#fff;border-radius:10px;font-size:11px;font-weight:700;
+    display:grid;place-items:center;border:2px solid #fff;
+    transform:scale(0);transition:transform .18s cubic-bezier(.34,1.56,.64,1);
+  }
+  .badge.show{transform:scale(1)}
+
+  .back{
+    background:none;border:none;cursor:pointer;color:var(--ink);
+    width:34px;height:34px;display:grid;place-items:center;margin-left:-6px;border-radius:9px;
+  }
+  .back:hover{background:#f5f5f5}
+  .head-title{display:flex;align-items:center;gap:10px}
+  .head-title h2{margin:0;font-size:19px;font-weight:700}
+  .pill-mesa{border:1px solid var(--line-2);border-radius:10px;padding:6px 12px;font-size:13px;color:var(--slate);font-weight:500}
+
+  /* ---------- Toggle día / noche ---------- */
+  .menu-fixed-top .toggle{
+    margin:12px 18px 0;background:var(--track);border-radius:13px;padding:5px;
+    display:grid;grid-template-columns:1fr 1fr;gap:4px;
+  }
+  .menu-fixed-top .toggle button{
+    border:none;background:none;cursor:pointer;border-radius:9px;padding:9px;
+    display:flex;align-items:center;justify-content:center;gap:8px;
+    font-size:14px;font-weight:600;color:var(--slate);transition:.18s;
+  }
+  .menu-fixed-top .toggle button svg{width:17px;height:17px}
+  .menu-fixed-top .toggle button.on{background:#fff;color:var(--ink);box-shadow:var(--shadow)}
+
+  /* ---------- Chips de categorías ---------- */
+  .menu-fixed-top{flex:0 0 auto;background:#fff;border-bottom:1px solid var(--line)}
+  .chips{display:flex;gap:10px;overflow-x:auto;padding:10px 18px 12px;scrollbar-width:none}
+  .chips::-webkit-scrollbar{display:none}
+  .chip{
+    flex:0 0 auto;border:none;cursor:pointer;border-radius:10px;padding:9px 15px;
+    font-size:14px;font-weight:600;color:var(--slate);background:transparent;transition:.15s;
+  }
+  .chip.on{background:var(--ink);color:#fff}
+
+  /* ---------- Barra flotante "Ver pedido" ---------- */
+  .view-cart-bar{
+    position:absolute;bottom:18px;left:18px;right:18px;
+    background:var(--ink);color:#fff;border-radius:16px;
+    padding:14px 18px;cursor:pointer;
+    display:flex;align-items:center;gap:12px;
+    box-shadow:0 8px 28px -6px rgba(20,20,20,.45);
+    transition:transform .2s cubic-bezier(.34,1.56,.64,1),opacity .2s;
+    z-index:10;
+  }
+  .view-cart-bar:hover{background:#111}
+  .vcb-count{
+    background:#fff;color:var(--ink);width:28px;height:28px;border-radius:8px;
+    display:grid;place-items:center;font-weight:800;font-size:14px;flex:0 0 auto;
+  }
+  .vcb-label{flex:1 1 auto;font-size:16px;font-weight:700}
+  .vcb-total{font-size:16px;font-weight:800;flex:0 0 auto}
+
+  /* ---------- Stepper inline en carta ---------- */
+  .item-stepper{display:flex;align-items:center;gap:0;border:1px solid var(--line-2);border-radius:10px;overflow:hidden}
+  .is-btn{
+    width:36px;height:36px;border:none;cursor:pointer;background:#fff;
+    display:grid;place-items:center;color:var(--ink);transition:background .12s;flex:0 0 auto;
+  }
+  .is-btn:hover{background:#f3f3f3}
+  .is-btn:active{transform:scale(.93)}
+  .is-btn.plus{background:var(--ink);color:#fff}
+  .is-btn.plus:hover{background:#000}
+  .is-btn svg{width:15px;height:15px}
+  .is-qty{min-width:28px;text-align:center;font-weight:800;font-size:15px;line-height:36px;background:#fff}
+
+  /* ---------- Secciones / items ---------- */
+  .section{padding:6px 18px 2px}
+  .section-h{display:flex;align-items:center;gap:14px;margin:18px 0 12px}
+  .section-h h3{margin:0;font-size:18px;font-weight:700;white-space:nowrap}
+  .section-h .rule{height:1px;background:var(--line);flex:1}
+
+  .item{
+    display:flex;gap:14px;border:1px solid var(--line);border-radius:var(--radius);
+    padding:12px;margin-bottom:12px;background:#fff;
+  }
+  .thumb{
+    width:84px;height:84px;flex:0 0 auto;border-radius:11px;overflow:hidden;position:relative;
+    background:linear-gradient(135deg,#f3efe8,#e9e3d8);
+  }
+  .thumb img{width:100%;height:100%;object-fit:cover;display:block}
+  .thumb .fallback{
+    position:absolute;inset:0;display:grid;place-items:center;font-size:30px;
+  }
+  .item-main{flex:1 1 auto;min-width:0;display:flex;flex-direction:column}
+  .item-main h4{margin:0 0 4px;font-size:15.5px;font-weight:700;line-height:1.2}
+  .item-main p{margin:0;font-size:13px;line-height:1.4;color:var(--muted)}
+  .item-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:auto;padding-top:10px}
+  .price{font-size:16px;font-weight:800}
+  .add{
+    border:1px solid var(--line-2);background:#fff;cursor:pointer;border-radius:10px;
+    padding:9px 14px;font-size:14px;font-weight:600;color:var(--ink);
+    display:flex;align-items:center;gap:7px;transition:.15s;white-space:nowrap;
+  }
+  .add svg{width:16px;height:16px}
+  .add:hover{background:#fafafa}
+  .add:active{transform:scale(.97)}
+  .add.added{background:var(--ink);color:#fff;border-color:var(--ink)}
+
+  /* ---------- Carrito ---------- */
+  .empty{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:40px;text-align:center}
+  .empty svg{width:42px;height:42px;color:#9aa0a8}
+  .empty p{margin:0;color:var(--muted);font-size:15px}
+  .btn-ghost{
+    border:1px solid var(--line-2);background:#fff;cursor:pointer;border-radius:11px;
+    padding:11px 20px;font-size:15px;font-weight:600;color:var(--ink);
+  }
+  .btn-ghost:hover{background:#fafafa}
+
+  .cart-list{padding:4px 18px}
+  .cart-row{display:flex;align-items:center;gap:13px;padding:16px 0;border-bottom:1px solid var(--line)}
+  .cart-row .thumb{width:54px;height:54px;border-radius:9px}
+  .cart-info{flex:1 1 auto;min-width:0}
+  .cart-info h4{margin:0 0 3px;font-size:15px;font-weight:700;line-height:1.2}
+  .cart-info .unit{font-size:13px;color:var(--muted)}
+  .cart-right{display:flex;flex-direction:column;align-items:flex-end;gap:10px}
+  .line-total{font-weight:800;font-size:15px;color:var(--accent)}
+  .stepper{display:flex;align-items:center;gap:12px}
+  .step{
+    width:30px;height:30px;border-radius:9px;border:1px solid var(--line-2);background:#fff;cursor:pointer;
+    display:grid;place-items:center;color:var(--ink);
+  }
+  .step.plus{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .step svg{width:15px;height:15px}
+  .step:active{transform:scale(.94)}
+  .qty{min-width:16px;text-align:center;font-weight:700;font-size:15px}
+
+  .notes{padding:16px 18px}
+  .notes textarea{
+    width:100%;min-height:78px;resize:vertical;border:1px solid var(--line-2);border-radius:12px;
+    padding:13px;font:inherit;font-size:14px;color:var(--ink);background:#fff;
+  }
+  .notes textarea::placeholder{color:#b6a994}
+  .notes textarea:focus{outline:2px solid var(--ink);outline-offset:1px}
+
+  /* ---------- Resumen / totales ---------- */
+  .summary{padding:16px 18px}
+  .sum-row{display:flex;justify-content:space-between;font-size:14px;margin-bottom:8px}
+  .sum-row .lbl{color:var(--slate)}
+  .sum-row .val{color:var(--accent);font-weight:600}
+  .sum-total{display:flex;justify-content:space-between;align-items:baseline;margin-top:6px}
+  .sum-total .lbl{font-size:17px;font-weight:700}
+  .sum-total .val{font-size:19px;font-weight:800}
+
+  .cta{
+    width:calc(100% - 36px);margin:0 18px 18px;border:none;cursor:pointer;
+    background:var(--ink);color:#fff;border-radius:14px;padding:16px;
+    font-size:16px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:10px;
+    transition:.15s;
+  }
+  .cta svg{width:18px;height:18px}
+  .cta:hover{background:#000}
+  .cta:active{transform:scale(.99)}
+  .cta:disabled{opacity:.4;cursor:not-allowed}
+
+  /* ---------- Pago ---------- */
+  .pay-body{padding:18px}
+  .pay-label{font-size:13px;color:var(--slate);font-weight:600;margin:2px 2px 12px}
+  .method{
+    display:flex;align-items:center;gap:13px;border:1px solid var(--line);border-radius:13px;
+    padding:15px 16px;margin-bottom:12px;cursor:pointer;background:#fff;transition:.15s;
+  }
+  .method:hover{background:#fafafa}
+  .method.sel{border-color:var(--ink);box-shadow:0 0 0 1px var(--ink)}
+  .radio{width:20px;height:20px;border-radius:50%;border:2px solid #cfcfcf;flex:0 0 auto;display:grid;place-items:center}
+  .method.sel .radio{border-color:var(--ink)}
+  .radio i{width:10px;height:10px;border-radius:50%;background:var(--ink);transform:scale(0);transition:.15s}
+  .method.sel .radio i{transform:scale(1)}
+  .method .m-ic{width:22px;height:22px;color:var(--ink);display:grid;place-items:center}
+  .method .m-ic svg{width:22px;height:22px}
+  .method span{font-size:15px;font-weight:600}
+  .summary-box{background:var(--track);border-radius:14px;padding:16px;margin-top:6px}
+  .summary-box .sum-total{margin-top:8px}
+
+  /* ---------- Confirmación ---------- */
+  .done{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:40px;text-align:center}
+  .check-circle{width:88px;height:88px;border-radius:50%;background:var(--green-bg);display:grid;place-items:center;margin-bottom:14px}
+  .check-circle svg{width:42px;height:42px;color:var(--green)}
+  .done h2{margin:6px 0 8px;font-size:24px;font-weight:800}
+  .done p{margin:0;color:var(--slate);font-size:15px;line-height:1.5;max-width:280px}
+  .done p b{color:var(--ink)}
+  .code-box{border:1px solid var(--line-2);border-radius:14px;padding:16px 30px;margin:26px 0 18px;text-align:center}
+  .code-box .k{font-size:11px;letter-spacing:1.5px;color:var(--muted);font-weight:600}
+  .code-box .v{font-size:28px;font-weight:800;letter-spacing:3px;font-variant-numeric:tabular-nums;margin-top:4px}
+
+  /* ---------- Pantalla QR (entrada) ---------- */
+  .qr-screen{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:36px;text-align:center}
+  .qr-screen .logo{width:56px;height:56px;border-radius:15px;font-size:26px;margin-bottom:14px}
+  .qr-screen h2{margin:0;font-size:23px;font-weight:800}
+  .qr-screen .sub{color:var(--slate);font-size:14px;margin:4px 0 0}
+  .qr-frame{
+    margin:26px 0 10px;padding:18px;background:#fff;border:1px solid var(--line-2);border-radius:18px;
+    box-shadow:var(--shadow);
+  }
+  .qr-frame img,.qr-frame canvas{display:block;width:172px;height:172px;border-radius:6px}
+  .qr-cap{color:var(--muted);font-size:13px;margin:6px 0 22px;max-width:240px;line-height:1.5}
+  .qr-url{font-size:12px;color:var(--slate);background:var(--track);padding:6px 12px;border-radius:8px;margin-bottom:18px;font-variant-numeric:tabular-nums}
+  .btn-primary{
+    border:none;cursor:pointer;background:var(--ink);color:#fff;border-radius:13px;
+    padding:14px 26px;font-size:15px;font-weight:700;display:flex;align-items:center;gap:9px;
+  }
+  .btn-primary svg{width:17px;height:17px}
+  .btn-primary:hover{background:#000}
+  .demo-tag{position:absolute;top:0;left:50%;transform:translateX(-50%);background:#fef3c7;color:#92560a;font-size:11px;font-weight:700;padding:3px 12px;border-radius:0 0 10px 10px;letter-spacing:.4px}
+
+  @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<div class="phone">
+  <div class="statusbar">
+    <span>9:41</span>
+  </div>
+
+  <div class="screens">
+
+    <!-- ============ MENÚ ============ -->
+    <section class="screen active" id="screen-menu">
+      <div class="app-head">
+        <div class="head-row">
+          <div class="brand">
+            <div class="logo">M</div>
+            <div>
+              <h1>Maido</h1>
+              <div class="mesa">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M9 4v16"/></svg>
+                Estás en la Mesa 4
+              </div>
+            </div>
+          </div>
+          <button class="icon-btn" onclick="go('cart')" aria-label="Ver pedido">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.7 13.4a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L23 6H6"/></svg>
+            <span class="badge" id="cart-badge">0</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Toggle y chips FIJOS (fuera del scroll) -->
+      <div class="menu-fixed-top">
+        <div class="toggle">
+          <button id="tg-dia" onclick="setMenu('dia')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+            Menú día
+          </button>
+          <button id="tg-noche" class="on" onclick="setMenu('noche')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+            Menú noche
+          </button>
+        </div>
+        <div class="chips" id="chips"></div>
+      </div>
+
+      <!-- Solo las secciones hacen scroll -->
+      <div class="screen-body" id="menu-body">
+        <div id="sections"></div>
+        <div style="height:90px"></div><!-- espacio para barra flotante -->
+      </div>
+
+      <!-- Barra flotante "Ver pedido" -->
+      <div class="view-cart-bar" id="view-cart-bar" onclick="go('cart')" style="display:none">
+        <span class="vcb-count" id="vcb-count">0</span>
+        <span class="vcb-label">Ver pedido</span>
+        <span class="vcb-total" id="vcb-total">S/ 0.00</span>
+      </div>
+    </section>
+
+    <!-- ============ CARRITO ============ -->
+    <section class="screen" id="screen-cart">
+      <div class="app-head">
+        <div class="head-row">
+          <div class="head-title">
+            <button class="back" onclick="go('menu')" aria-label="Volver">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+            </button>
+            <h2>Tu pedido</h2>
+          </div>
+          <span class="pill-mesa">Mesa 4</span>
+        </div>
+      </div>
+      <div class="screen-body" id="cart-body"></div>
+      <div class="screen-footer" id="cart-footer"></div>
+    </section>
+
+    <!-- ============ PAGO ============ -->
+    <section class="screen" id="screen-pay">
+      <div class="app-head">
+        <div class="head-title">
+          <button class="back" onclick="go('cart')" aria-label="Volver">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+          </button>
+          <h2>Pagar</h2>
+        </div>
+      </div>
+      <div class="screen-body pay-body">
+        <div class="pay-label">Método de pago</div>
+        <div id="methods"></div>
+        <div class="summary-box" id="pay-summary"></div>
+      </div>
+      <div class="screen-footer">
+        <button class="cta" style="margin-top:18px" onclick="confirmPay()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4 12 14.01l-3-3"/></svg>
+          Confirmar pago
+        </button>
+      </div>
+    </section>
+
+    <!-- ============ CONFIRMACIÓN ============ -->
+    <section class="screen" id="screen-done">
+      <div class="done">
+        <div class="check-circle">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9 12l2 2 4-4"/></svg>
+        </div>
+        <h2>¡Pedido confirmado!</h2>
+        <p>Tu pedido de la <b>Mesa 4</b> ya está en cocina. Te avisaremos cuando esté listo.</p>
+        <div class="code-box">
+          <div class="k">CÓDIGO DE PEDIDO</div>
+          <div class="v" id="order-code">A-251</div>
+        </div>
+        <button class="btn-ghost" onclick="resetOrder()">Hacer otro pedido</button>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<script>
+/* ---------------- Datos de ejemplo ---------------- */
+const img = (file) => `img/${file}`;
+const MENU = {
+  "Para empezar":[
+    {id:"e1",name:"Tiradito Maido",desc:"Láminas de pesca fina, crema de rocoto y aceite de sésamo.",price:52,img:img("tiradito-peruvian-fish-dish-1.jpg"), fb:""},
+    {id:"e2",name:"Causa de Pulpo al Olivo",desc:"Papa amarilla, pulpo grillado y mayonesa de aceituna botija.",price:44,img:img("causapolvoolivo.jpg"), fb:""},
+  ],
+  "Barra de Nikkei":[
+    {id:"n1",name:"Nigiri de Toro Flameado",desc:"Ventresca de atún flameada, salsa anticuchera.",price:38,img:img("o-toro-nigiri-sushi.jpg"),fb:""},
+    {id:"n2",name:"Nigiri de Langostino",desc:"Langostino, ají limo y ralladura de lima.",price:32,img:img("Nigiri-de-langostinos-1536x728.jpg"),fb:""},
+    {id:"n3",name:"Acevichado Roll",desc:"Langostino tempura, palta y salsa acevichada.",price:46,img:img("f7211ee3-777b-405f-b3b3-5168cb061024.jpg"),fb:""},
+  ],
+  "Fondos":[
+    {id:"f1",name:"Arroz Nikkei con Mariscos",desc:"Arroz meloso, mariscos salteados y un toque de sillao.",price:58,img:img("arrozconmariscos.jpg"),fb:""},
+    {id:"f2",name:"Lomo Saltado Maido",desc:"Lomo fino, sillao, cebolla morada y papas nativas.",price:54,img:img("lomosaltado.jpg"),fb:""},
+    {id:"f3",name:"Pesca del día a la plancha",desc:"Filete de pescado, salsa de maracuyá y vegetales de estación.",price:56,img:img("pesacdoalaplancha.jpg"),fb:""},
+  ],
+  "Dulces":[
+    {id:"d1",name:"Suspiro Nikkei",desc:"Manjar de lúcuma, merengue al sake y crocante de sésamo.",price:26,img:img("SuspiroNikkei.jpg"),fb:""},
+    {id:"d2",name:"Mochi de Chocolate",desc:"Mochi relleno de ganache con helado de vainilla.",price:24,img:img("MochideChocolate.jpg"),fb:""},
+  ],
+};
+const DAY_HIDE = ["Barra de Nikkei"]; // la barra nikkei es solo de noche
+const TIP_RATE = 0.10;
+
+const PAY_METHODS = [
+  {id:"yape",label:"Yape",ic:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="3"/><path d="M11 18h2"/></svg>'},
+  {id:"plin",label:"Plin",ic:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2" width="12" height="20" rx="2.5"/><path d="M10 6h4"/></svg>'},
+  {id:"card",label:"Tarjeta de crédito/débito",ic:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2.5"/><path d="M2 10h20"/></svg>'},
+  {id:"cash",label:"Efectivo (paga en caja)",ic:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/></svg>'},
+];
+
+/* ---------------- Estado ---------------- */
+let mode = "noche";
+let cart = {};               // {id: qty}
+let selectedMethod = "yape";
+const itemById = {};
+Object.values(MENU).flat().forEach(i => itemById[i.id] = i);
+
+const money = n => "S/ " + n.toFixed(2);
+const PLUS = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>';
+const MINUS = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M5 12h14"/></svg>';
+
+/* ---------------- Navegación ---------------- */
+function go(screen){
+  document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+  document.getElementById("screen-" + screen).classList.add("active");
+  document.querySelector(".screens").scrollTop = 0;
+  const body = document.querySelector(`#screen-${screen} .screen-body`);
+  if(body) body.scrollTop = 0;
+  if(screen === "cart") renderCart();
+  if(screen === "pay")  renderPay();
+}
+
+/* ---------------- Menú ---------------- */
+function visibleCategories(){
+  return Object.keys(MENU).filter(c => mode === "noche" || !DAY_HIDE.includes(c));
+}
+function setMenu(m){
+  mode = m;
+  document.getElementById("tg-dia").classList.toggle("on", m === "dia");
+  document.getElementById("tg-noche").classList.toggle("on", m === "noche");
+  renderMenu();
+}
+function renderMenu(){
+  const cats = visibleCategories();
+  const chips = document.getElementById("chips");
+  chips.innerHTML = cats.map((c,i) =>
+    `<button class="chip ${i===0?'on':''}" data-cat="${c}" onclick="scrollToCat('${c}')">${c}</button>`
+  ).join("");
+
+  const sections = document.getElementById("sections");
+  sections.innerHTML = cats.map(c => `
+    <div class="section" data-cat="${c}" id="sec-${slug(c)}">
+      <div class="section-h"><h3>${c}</h3><div class="rule"></div></div>
+      ${MENU[c].map(it => itemCard(it)).join("")}
+    </div>`).join("");
+}
+function itemCard(it){
+  const q = cart[it.id] || 0;
+  const ctrl = q === 0
+    ? `<button class="add" id="add-${it.id}" onclick="menuAdd('${it.id}')">
+         ${PLUS}<span>Agregar</span>
+       </button>`
+    : `<div class="item-stepper" id="add-${it.id}">
+         <button class="is-btn" onclick="menuChange('${it.id}',-1)" aria-label="Quitar">${MINUS}</button>
+         <span class="is-qty">${q}</span>
+         <button class="is-btn plus" onclick="menuChange('${it.id}',1)" aria-label="Agregar">${PLUS}</button>
+       </div>`;
+  return `
+  <div class="item">
+    <div class="thumb">
+      <div class="fallback">${it.fb}</div>
+      <img src="${it.img}" alt="${it.name}" loading="lazy" onerror="this.remove()">
+    </div>
+    <div class="item-main">
+      <h4>${it.name}</h4>
+      <p>${it.desc}</p>
+      <div class="item-foot">
+        <span class="price">${money(it.price)}</span>
+        ${ctrl}
+      </div>
+    </div>
+  </div>`;
+}
+function slug(s){return s.toLowerCase().normalize("NFD").replace(/[^a-z]/g,"")}
+function scrollToCat(cat){
+  document.querySelectorAll(".chip").forEach(ch => ch.classList.toggle("on", ch.dataset.cat === cat));
+  const el = document.getElementById("sec-" + slug(cat));
+  const body = document.getElementById("menu-body");
+  if(el) body.scrollTo({top: el.offsetTop - 70, behavior:"smooth"});
+}
+
+/* ---------------- Carrito ---------------- */
+function menuAdd(id){
+  cart[id] = 1;
+  updateCartUI();
+  refreshItemCtrl(id);
+}
+function menuChange(id, delta){
+  cart[id] = (cart[id]||0) + delta;
+  if(cart[id] <= 0) delete cart[id];
+  updateCartUI();
+  refreshItemCtrl(id);
+}
+function refreshItemCtrl(id){
+  const wrap = document.getElementById("add-" + id);
+  if(!wrap) return;
+  const it = itemById[id];
+  const q = cart[id] || 0;
+  if(q === 0){
+    wrap.outerHTML = `<button class="add" id="add-${id}" onclick="menuAdd('${id}')">${PLUS}<span>Agregar</span></button>`;
+  } else {
+    // si ya es un stepper, solo actualizar cantidad; si era botón, reemplazar
+    if(wrap.classList.contains("item-stepper")){
+      wrap.querySelector(".is-qty").textContent = q;
+    } else {
+      wrap.outerHTML = `<div class="item-stepper" id="add-${id}">
+        <button class="is-btn" onclick="menuChange('${id}',-1)" aria-label="Quitar">${MINUS}</button>
+        <span class="is-qty">${q}</span>
+        <button class="is-btn plus" onclick="menuChange('${id}',1)" aria-label="Agregar">${PLUS}</button>
+      </div>`;
+    }
+  }
+}
+function addItem(id){ menuAdd(id); } // alias por si queda alguna ref
+function cartCount(){ return Object.values(cart).reduce((a,b)=>a+b,0); }
+function subtotal(){ return Object.entries(cart).reduce((s,[id,q]) => s + itemById[id].price*q, 0); }
+function updateCartUI(){
+  const n = cartCount();
+  // badge icono carrito
+  const b = document.getElementById("cart-badge");
+  if(b){ b.textContent = n; b.classList.toggle("show", n > 0); }
+  // barra flotante
+  const bar = document.getElementById("view-cart-bar");
+  if(bar){
+    bar.style.display = n > 0 ? "flex" : "none";
+    const vc = document.getElementById("vcb-count");
+    const vt = document.getElementById("vcb-total");
+    if(vc) vc.textContent = n;
+    if(vt) vt.textContent = money(subtotal());
+  }
+}
+function updateBadge(){ updateCartUI(); } // alias de compatibilidad
+function changeQty(id, delta){
+  cart[id] = (cart[id]||0) + delta;
+  if(cart[id] <= 0) delete cart[id];
+  updateCartUI();
+  refreshItemCtrl(id); // por si el menú sigue montado debajo
+  renderCart();
+}
+function renderCart(){
+  const body = document.getElementById("cart-body");
+  const footer = document.getElementById("cart-footer");
+  const ids = Object.keys(cart);
+
+  if(ids.length === 0){
+    body.innerHTML = `
+      <div class="empty">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.7 13.4a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L23 6H6"/></svg>
+        <p>Tu carrito está vacío</p>
+        <button class="btn-ghost" onclick="go('menu')">Ver la carta</button>
+      </div>`;
+    footer.innerHTML = "";
+    return;
+  }
+
+  body.innerHTML = `
+    <div class="cart-list">
+      ${ids.map(id => {
+        const it = itemById[id], q = cart[id];
+        return `
+        <div class="cart-row">
+          <div class="thumb"><div class="fallback">${it.fb}</div>
+            <img src="${it.img}" alt="" onerror="this.remove()"></div>
+          <div class="cart-info">
+            <h4>${it.name}</h4>
+            <div class="unit">${money(it.price)}</div>
+          </div>
+          <div class="cart-right">
+            <div class="line-total">${money(it.price*q)}</div>
+            <div class="stepper">
+              <button class="step" onclick="changeQty('${id}',-1)" aria-label="Quitar uno">${MINUS}</button>
+              <span class="qty">${q}</span>
+              <button class="step plus" onclick="changeQty('${id}',1)" aria-label="Agregar uno">${PLUS}</button>
+            </div>
+          </div>
+        </div>`;
+      }).join("")}
+    </div>
+    <div class="notes">
+      <textarea id="kitchen-notes" placeholder="Notas para la cocina (ej. sin ají, sin cebolla)…"></textarea>
+    </div>`;
+
+  const sub = subtotal(), tip = sub*TIP_RATE, total = sub+tip;
+  footer.innerHTML = `
+    <div class="summary">
+      <div class="sum-row"><span class="lbl">Subtotal</span><span class="val">${money(sub)}</span></div>
+      <div class="sum-row"><span class="lbl">Propina sugerida (10%)</span><span class="val">${money(tip)}</span></div>
+      <div class="sum-total"><span class="lbl">Total</span><span class="val" style="color:var(--ink)">${money(total)}</span></div>
+    </div>
+    <button class="cta" onclick="go('pay')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2.5"/><path d="M2 10h20"/></svg>
+      Ir a pagar · ${money(total)}
+    </button>`;
+}
+
+/* ---------------- Pago ---------------- */
+function renderPay(){
+  document.getElementById("methods").innerHTML = PAY_METHODS.map(m => `
+    <div class="method ${m.id===selectedMethod?'sel':''}" onclick="selectMethod('${m.id}')">
+      <span class="radio"><i></i></span>
+      <span class="m-ic">${m.ic}</span>
+      <span>${m.label}</span>
+    </div>`).join("");
+
+  const sub = subtotal(), tip = sub*TIP_RATE, total = sub+tip;
+  document.getElementById("pay-summary").innerHTML = `
+    <div class="sum-row"><span class="lbl">Subtotal</span><span class="val">${money(sub)}</span></div>
+    <div class="sum-row"><span class="lbl">Propina (10%)</span><span class="val">${money(tip)}</span></div>
+    <div class="sum-total"><span class="lbl">Total</span><span class="val">${money(total)}</span></div>`;
+}
+function selectMethod(id){
+  selectedMethod = id;
+  document.querySelectorAll(".method").forEach((el,i) =>
+    el.classList.toggle("sel", PAY_METHODS[i].id === id));
+}
+function confirmPay(){
+  const code = "A-" + Math.floor(150 + Math.random()*849);
+  document.getElementById("order-code").textContent = code;
+  go("done");
+}
+function resetOrder(){
+  cart = {};
+  selectedMethod = "yape";
+  updateCartUI();
+  setMenu("noche");
+  go("menu");
+}
+
+/* ---------------- Init ---------------- */
+function initQR(){
+  const qrcode = document.getElementById("qrcode");
+  const qrUrl = document.getElementById("qr-url");
+  if(!qrcode || !qrUrl) return;
+
+  const url = "https://" + qrUrl.textContent;
+  try{
+    new QRCode(qrcode, {
+      text:url, width:172, height:172,
+      colorDark:"#161616", colorLight:"#ffffff",
+      correctLevel: QRCode.CorrectLevel.M
+    });
+  }catch(e){ /* si la librería no carga, la pantalla sigue siendo usable */ }
+}
+renderMenu();
+updateCartUI();
+initQR();
+</script>
+</body>
+</html>
